@@ -6,7 +6,8 @@ Downloads your Canvas files
 
 * Requires Python 3
 * Create `.env`
-  * Generate an access token for testing https://canvas.instructure.com/doc/api/file.oauth.html#manual-token-generation
+  * Generate an access token for testing
+    * https://canvas.instructure.com/doc/api/file.oauth.html#manual-token-generation
   * ```
     ACCESS_TOKEN=
     ```
