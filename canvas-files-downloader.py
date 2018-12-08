@@ -8,6 +8,7 @@ ACCESS_TOKEN = config('ACCESS_TOKEN')
 headers = {'Authorization': 'Bearer ' + ACCESS_TOKEN}
 
 # TODO make psu.instructure.com changeable
+# TODO refactor code
 
 root_directory = os.getcwd()
 files_directory = os.path.join(root_directory, 'files')
