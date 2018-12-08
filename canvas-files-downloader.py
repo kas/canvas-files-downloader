@@ -5,17 +5,9 @@ import urllib.request
 
 ACCESS_TOKEN = config('ACCESS_TOKEN')
 
-FOLDERS_API_URL = 'https://psu.instructure.com/api/v1/users/self/folders'
-
 headers = {'Authorization': 'Bearer ' + ACCESS_TOKEN}
 
-# https://psu.instructure.com/files
-
-# TODO also download my submissions for all courses
-# get folders for courses i've submitted files to
-# folders = requests.get(FOLDERS_API_URL, headers=headers).json()
-# for folder in folders:
-#     print(folder['name'], folder['id'])
+# TODO make psu.instructure.com changeable
 
 root_directory = os.getcwd()
 files_directory = os.path.join(root_directory, 'files')
@@ -70,8 +62,6 @@ for course in courses:
             if not os.path.exists(f_path):
                 urllib.request.urlretrieve(f['url'], f_path)
 
-# TODO download group members for each group
-
 groups_directory = os.path.join(files_directory, 'groups')
 if not os.path.exists(groups_directory):
     os.makedirs(groups_directory)
@@ -113,11 +103,82 @@ for group in groups:
                 next_url = link['url']
                 break
         files = response.json()
-        group_directory = os.path.join(groups_directory, '{} {}'.format(group['name'], group['id']))
+        group_directory = os.path.join(groups_directory, '{} {}'.format(group['name'].replace('/', '-'), group['id']))
         if not os.path.exists(group_directory):
             os.makedirs(group_directory)
         for f in files:
             print(f['display_name'], f['url'], f['id'])
             f_path = os.path.join(group_directory, f['display_name'])
+            if not os.path.exists(f_path):
+                urllib.request.urlretrieve(f['url'], f_path)
+        group_users = []
+        next_group_users_url = 'https://psu.instructure.com/api/v1/groups/{}/users'.format(group['id'])
+        while next_group_users_url:
+            response = requests.get(next_group_users_url, headers=headers)
+            if not 'Link' in response.headers:
+                break
+            links = requests.utils.parse_header_links(response.headers['Link'].rstrip('>').replace('>,<', ',<'))
+            next_group_users_url = None
+            for link in links:
+                if link['rel'] == 'next':
+                    next_group_users_url = link['url']
+                    break
+            current_group_users = response.json()
+            for current_group_user in current_group_users:
+                group_users.append(current_group_user)
+        group_users_file_path = os.path.join(group_directory, '{} {} users.txt'.format(group['name'].replace('/', '-'), group['id']))
+        if not os.path.exists(group_users_file_path):
+            group_users_file = open(group_users_file_path, 'w')
+            for group_user in group_users:
+                group_users_file.write('{} {}\n'.format(group_user['name'],  group_user['id']))
+            group_users_file.close()
+
+submissions_directory = os.path.join(files_directory, 'submissions')
+if not os.path.exists(submissions_directory):
+    os.makedirs(submissions_directory)
+
+print('\n\n\n')
+
+submissions = []
+
+# get course submissions
+next_url = 'https://psu.instructure.com/api/v1/users/self/folders'
+while next_url:
+    response = requests.get(next_url, headers=headers)
+    if not 'Link' in response.headers:
+        break
+    links = requests.utils.parse_header_links(response.headers['Link'].rstrip('>').replace('>,<', ',<'))
+    next_url = None
+    for link in links:
+        if link['rel'] == 'next':
+            next_url = link['url']
+            break
+    current_submissions = response.json()
+    for current_submission in current_submissions:
+        submissions.append(current_submission)
+        print(current_submission['name'], current_submission['id'])
+
+print('\n\n\n')
+
+# download course submissions
+for submission in submissions:
+    next_url = 'https://psu.instructure.com/api/v1/folders/{}/files'.format(submission['id'])
+    while next_url:
+        response = requests.get(next_url, headers=headers)
+        if not 'Link' in response.headers:
+            break
+        links = requests.utils.parse_header_links(response.headers['Link'].rstrip('>').replace('>,<', ',<'))
+        next_url = None
+        for link in links:
+            if link['rel'] == 'next':
+                next_url = link['url']
+                break
+        files = response.json()
+        submission_directory = os.path.join(submissions_directory, submission['name'])
+        if not os.path.exists(submission_directory):
+            os.makedirs(submission_directory)
+        for f in files:
+            print(f['display_name'], f['url'], f['id'])
+            f_path = os.path.join(submission_directory, f['display_name'])
             if not os.path.exists(f_path):
                 urllib.request.urlretrieve(f['url'], f_path)

@@ -1,6 +1,6 @@
 # canvas-files-downloader
 
-Downloads your Canvas files
+Downloads your Canvas course files, group submissions, and user submissions
 
 ## Usage
 
