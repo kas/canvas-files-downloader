@@ -7,10 +7,10 @@ Downloads your Canvas files
 * Requires Python 3
 * Create `.env`
   * Get your access token from https://canvas.instructure.com/doc/api/file.oauth.html
-  * Put your access token after the equals sign
   * ```
     ACCESS_TOKEN=
     ```
+    * Put your access token after the equals sign
 * Create a virtual environment
   * `python3.7 -m venv venv`
   * `source venv/bin/activate`
