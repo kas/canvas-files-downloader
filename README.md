@@ -17,5 +17,6 @@ Downloads your Canvas files
   * `source venv/bin/activate`
 * Install dependencies
   * `pip install -r requirements.txt`
-* `python canvas-files-downloader.py`
+* Run the script
+  * `python canvas-files-downloader.py`
 * Files will be downloaded to `files/`
