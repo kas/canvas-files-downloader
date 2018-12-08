@@ -12,7 +12,7 @@ Downloads your Canvas files
     ACCESS_TOKEN=
     ```
     * Put your access token after the equals sign
-* Create a virtual environment
+* Create a virtual environment and activate it
   * `python3 -m venv venv`
   * `source venv/bin/activate`
 * Install dependencies
