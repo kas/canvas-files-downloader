@@ -15,6 +15,8 @@ Downloads your Canvas course files, group submissions, and user submissions
     * Put your access token after the equals sign
     * Add your school's canvas URL. Example: `BASE_URL=https://lms.yourschool.edu`
 * Create a virtual environment and activate it
+  * Open Powershell
+  * `Set-ExecutionPolicy RemoteSigned`
   * `python3 -m venv venv`
   * `./venv/Scripts/activate`
 * Install dependencies
