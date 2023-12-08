@@ -3,6 +3,7 @@ import os
 import requests
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from pathvalidate import sanitize_filename
 
 ACCESS_TOKEN = config('ACCESS_TOKEN')
 BASE_URL = config('BASE_URL')
@@ -12,6 +13,10 @@ def get_thread_count():
     cpu_cores = os.cpu_count() or 1  # Fallback to 1 if os.cpu_count() returns None
     thread_workers = cpu_cores * default_multiplier
     return thread_workers
+
+def get_sanitized_path(directory, name):
+    sanitized_name = sanitize_filename(name)
+    return os.path.join(directory, sanitized_name)
 
 headers = {'Authorization': 'Bearer ' + ACCESS_TOKEN}
 
@@ -48,6 +53,10 @@ while next_url:
     current_courses = response.json()
     for current_course in current_courses:
         courses.append(current_course)
+        try:
+            print(current_course['name'], current_course['id'])
+        except:
+            print("Error printing course:", current_course)
 
 print('\n\n\n')
 
@@ -73,7 +82,7 @@ for course in courses:
                 next_url = link['url']
                 break
         files = response.json()
-        course_directory = os.path.join(courses_directory, course['name'])
+        course_directory = get_sanitized_path(courses_directory, course['name'])
         if not os.path.exists(course_directory):
             os.makedirs(course_directory)
         process_files(files, course_directory)
@@ -119,7 +128,7 @@ for group in groups:
                 next_url = link['url']
                 break
         files = response.json()
-        group_directory = os.path.join(groups_directory, '{} {}'.format(group['name'].replace('/', '-'), group['id']))
+        group_directory = get_sanitized_path(groups_directory, '{} {}'.format(group['name'], group['id']))
         if not os.path.exists(group_directory):
             os.makedirs(group_directory)
         process_files(files, group_directory)
@@ -139,7 +148,7 @@ for group in groups:
             current_group_users = response.json()
             for current_group_user in current_group_users:
                 group_users.append(current_group_user)
-        group_users_file_path = os.path.join(group_directory, '{} {} users.txt'.format(group['name'].replace('/', '-'), group['id']))
+        group_users_file_path = get_sanitized_path(group_directory, '{} {} users.txt'.format(group['name'].replace('/', '-'), group['id']))
         if not os.path.exists(group_users_file_path):
             with open(group_users_file_path, 'w') as group_users_file:
                 for group_user in group_users:
