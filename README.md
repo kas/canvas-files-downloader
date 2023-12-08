@@ -10,11 +10,12 @@ Downloads your Canvas course files, group submissions, and user submissions
     * https://canvas.instructure.com/doc/api/file.oauth.html#manual-token-generation
   * ```
     ACCESS_TOKEN=
+    BASE_URL=
     ```
     * Put your access token after the equals sign
 * Create a virtual environment and activate it
   * `python3 -m venv venv`
-  * `source venv/bin/activate`
+  * `source venv/Scripts/activate`
 * Install dependencies
   * `pip install -r requirements.txt`
 * Run the script
