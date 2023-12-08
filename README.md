@@ -13,6 +13,7 @@ Downloads your Canvas course files, group submissions, and user submissions
     BASE_URL=
     ```
     * Put your access token after the equals sign
+    * Add your school's canvas URL. Example: `BASE_URL=https://lms.yourschool.edu`
 * Create a virtual environment and activate it
   * `python3 -m venv venv`
   * `source venv/Scripts/activate`
