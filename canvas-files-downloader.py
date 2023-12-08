@@ -6,7 +6,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 ACCESS_TOKEN = config('ACCESS_TOKEN')
 BASE_URL = config('BASE_URL')
-thread_workers = 20
+
+def get_thread_count():
+    default_multiplier = 4  # Default multiplier for I/O-bound tasks
+    cpu_cores = os.cpu_count() or 1  # Fallback to 1 if os.cpu_count() returns None
+    thread_workers = cpu_cores * default_multiplier
+    return thread_workers
 
 headers = {'Authorization': 'Bearer ' + ACCESS_TOKEN}
 
@@ -48,7 +53,7 @@ print('\n\n\n')
 
 # Function to process files for a course or group
 def process_files(files, directory):
-    with ThreadPoolExecutor(max_workers=thread_workers) as executor:  # Adjust the number of workers as needed
+    with ThreadPoolExecutor(max_workers=get_thread_count()) as executor:  # Adjust the number of workers as needed
         for f in files:
             print(f['display_name'], f['url'], f['id'])
             f_path = os.path.join(directory, f['display_name'])
