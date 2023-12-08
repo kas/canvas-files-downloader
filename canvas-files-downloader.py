@@ -2,13 +2,30 @@ from decouple import config
 import os
 import requests
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from pathvalidate import sanitize_filename
 
 ACCESS_TOKEN = config('ACCESS_TOKEN')
+BASE_URL = config('BASE_URL')
+
+def get_thread_count():
+    default_multiplier = 4  # Default multiplier for I/O-bound tasks
+    cpu_cores = os.cpu_count() or 1  # Fallback to 1 if os.cpu_count() returns None
+    thread_workers = cpu_cores * default_multiplier
+    return thread_workers
+
+def get_sanitized_path(directory, name):
+    sanitized_name = sanitize_filename(name)
+    return os.path.join(directory, sanitized_name)
 
 headers = {'Authorization': 'Bearer ' + ACCESS_TOKEN}
 
-# TODO make psu.instructure.com changeable
-# TODO refactor code
+# Function to download a file
+def download_file(file_info):
+    f_path, url = file_info
+    if not os.path.exists(f_path):
+        urllib.request.urlretrieve(url, f_path)
+        print(f"Downloaded {f_path}")
 
 root_directory = os.getcwd()
 files_directory = os.path.join(root_directory, 'files')
@@ -22,7 +39,7 @@ print('\n\n\n')
 courses = []
 
 # get courses
-next_url = 'https://psu.instructure.com/api/v1/courses'
+next_url = BASE_URL + '/api/v1/courses'
 while next_url:
     response = requests.get(next_url, headers=headers)
     if not 'Link' in response.headers:
@@ -36,13 +53,24 @@ while next_url:
     current_courses = response.json()
     for current_course in current_courses:
         courses.append(current_course)
-        print(current_course['name'], current_course['id'])
+        try:
+            print(current_course['name'], current_course['id'])
+        except:
+            print("Error printing course:", current_course)
 
 print('\n\n\n')
 
+# Function to process files for a course or group
+def process_files(files, directory):
+    with ThreadPoolExecutor(max_workers=get_thread_count()) as executor:  # Adjust the number of workers as needed
+        for f in files:
+            print(f['display_name'], f['url'], f['id'])
+            f_path = os.path.join(directory, f['display_name'])
+            executor.submit(download_file, (f_path, f['url']))
+
 # download files for a course
 for course in courses:
-    next_url = 'https://psu.instructure.com/api/v1/courses/{}/files'.format(course['id'])
+    next_url = BASE_URL + '/api/v1/courses/{}/files'.format(course['id'])
     while next_url:
         response = requests.get(next_url, headers=headers)
         if not 'Link' in response.headers:
@@ -54,14 +82,10 @@ for course in courses:
                 next_url = link['url']
                 break
         files = response.json()
-        course_directory = os.path.join(courses_directory, course['name'])
+        course_directory = get_sanitized_path(courses_directory, course['name'])
         if not os.path.exists(course_directory):
             os.makedirs(course_directory)
-        for f in files:
-            print(f['display_name'], f['url'], f['id'])
-            f_path = os.path.join(course_directory, f['display_name'])
-            if not os.path.exists(f_path):
-                urllib.request.urlretrieve(f['url'], f_path)
+        process_files(files, course_directory)
 
 groups_directory = os.path.join(files_directory, 'groups')
 if not os.path.exists(groups_directory):
@@ -72,7 +96,7 @@ print('\n\n\n')
 groups = []
 
 # get groups
-next_url = 'https://psu.instructure.com/api/v1/users/self/groups'
+next_url = BASE_URL + '/api/v1/users/self/groups'
 while next_url:
     response = requests.get(next_url, headers=headers)
     if not 'Link' in response.headers:
@@ -92,7 +116,7 @@ print('\n\n\n')
 
 # download files for a group
 for group in groups:
-    next_url = 'https://psu.instructure.com/api/v1/groups/{}/files'.format(group['id'])
+    next_url = BASE_URL + '/api/v1/groups/{}/files'.format(group['id'])
     while next_url:
         response = requests.get(next_url, headers=headers)
         if not 'Link' in response.headers:
@@ -104,16 +128,13 @@ for group in groups:
                 next_url = link['url']
                 break
         files = response.json()
-        group_directory = os.path.join(groups_directory, '{} {}'.format(group['name'].replace('/', '-'), group['id']))
+        group_directory = get_sanitized_path(groups_directory, '{} {}'.format(group['name'], group['id']))
         if not os.path.exists(group_directory):
             os.makedirs(group_directory)
-        for f in files:
-            print(f['display_name'], f['url'], f['id'])
-            f_path = os.path.join(group_directory, f['display_name'])
-            if not os.path.exists(f_path):
-                urllib.request.urlretrieve(f['url'], f_path)
+        process_files(files, group_directory)
+
         group_users = []
-        next_group_users_url = 'https://psu.instructure.com/api/v1/groups/{}/users'.format(group['id'])
+        next_group_users_url = BASE_URL + '/api/v1/groups/{}/users'.format(group['id'])
         while next_group_users_url:
             response = requests.get(next_group_users_url, headers=headers)
             if not 'Link' in response.headers:
@@ -127,12 +148,11 @@ for group in groups:
             current_group_users = response.json()
             for current_group_user in current_group_users:
                 group_users.append(current_group_user)
-        group_users_file_path = os.path.join(group_directory, '{} {} users.txt'.format(group['name'].replace('/', '-'), group['id']))
+        group_users_file_path = get_sanitized_path(group_directory, '{} {} users.txt'.format(group['name'].replace('/', '-'), group['id']))
         if not os.path.exists(group_users_file_path):
-            group_users_file = open(group_users_file_path, 'w')
-            for group_user in group_users:
-                group_users_file.write('{} {}\n'.format(group_user['name'],  group_user['id']))
-            group_users_file.close()
+            with open(group_users_file_path, 'w') as group_users_file:
+                for group_user in group_users:
+                    group_users_file.write('{} {}\n'.format(group_user['name'],  group_user['id']))
 
 submissions_directory = os.path.join(files_directory, 'submissions')
 if not os.path.exists(submissions_directory):
@@ -143,7 +163,7 @@ print('\n\n\n')
 submissions = []
 
 # get course submissions
-next_url = 'https://psu.instructure.com/api/v1/users/self/folders'
+next_url = BASE_URL + '/api/v1/users/self/folders'
 while next_url:
     response = requests.get(next_url, headers=headers)
     if not 'Link' in response.headers:
@@ -163,7 +183,7 @@ print('\n\n\n')
 
 # download course submissions
 for submission in submissions:
-    next_url = 'https://psu.instructure.com/api/v1/folders/{}/files'.format(submission['id'])
+    next_url = BASE_URL + '/api/v1/folders/{}/files'.format(submission['id'])
     while next_url:
         response = requests.get(next_url, headers=headers)
         if not 'Link' in response.headers:
@@ -178,8 +198,4 @@ for submission in submissions:
         submission_directory = os.path.join(submissions_directory, submission['name'])
         if not os.path.exists(submission_directory):
             os.makedirs(submission_directory)
-        for f in files:
-            print(f['display_name'], f['url'], f['id'])
-            f_path = os.path.join(submission_directory, f['display_name'])
-            if not os.path.exists(f_path):
-                urllib.request.urlretrieve(f['url'], f_path)
+        process_files(files, submission_directory)

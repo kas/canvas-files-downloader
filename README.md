@@ -10,11 +10,15 @@ Downloads your Canvas course files, group submissions, and user submissions
     * https://canvas.instructure.com/doc/api/file.oauth.html#manual-token-generation
   * ```
     ACCESS_TOKEN=
+    BASE_URL=
     ```
     * Put your access token after the equals sign
+    * Add your school's canvas URL. Example: `BASE_URL=https://lms.yourschool.edu`
 * Create a virtual environment and activate it
+  * Open Powershell
+  * `Set-ExecutionPolicy RemoteSigned`
   * `python3 -m venv venv`
-  * `source venv/bin/activate`
+  * `./venv/Scripts/activate`
 * Install dependencies
   * `pip install -r requirements.txt`
 * Run the script
